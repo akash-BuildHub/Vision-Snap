@@ -230,6 +230,13 @@ function ClassBox({
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
 
+      const isMirrored = Boolean(streamRef.current);
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      if (isMirrored) {
+        ctx.translate(width, 0);
+        ctx.scale(-1, 1);
+      }
+
       ctx.drawImage(video, 0, 0, width, height);
 
       const blob = await new Promise((resolve) => {
