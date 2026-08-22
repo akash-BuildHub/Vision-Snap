@@ -1,0 +1,26 @@
+# Store every text file with LF in the repo and check it out with LF,
+# so core.autocrlf never has to convert (and never warns) on any machine.
+* text=auto eol=lf
+
+# Windows-only tooling that genuinely wants CRLF.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary assets: never inspect, never convert.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.zip binary
+*.pdf binary
+*.mp4 binary
+*.webm binary
+
+# Keep generated lockfile diffs out of review noise.
+package-lock.json -diff linguist-generated

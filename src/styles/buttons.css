@@ -1,0 +1,84 @@
+.btn-row {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.btn {
+  flex: 1;
+  padding: 10px 14px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 600;
+  color: white;
+  background: linear-gradient(135deg, #1e90ff, #0056b3);
+  transition: all 0.25s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+}
+
+.btn:hover {
+  background: linear-gradient(135deg, #2d9cff, #0070e0);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 14px rgba(0, 0, 0, 0.4);
+}
+
+.hold-record-row {
+  display: none;
+  gap: 10px;
+  justify-content: center;
+}
+
+.hold-record-row.show {
+  display: flex;
+}
+
+.hold-record-btn.recording {
+  background: linear-gradient(135deg, #ff4b4b, #c40000);
+  animation: recording-pulse 1s ease-in-out infinite;
+}
+
+.hold-record-btn.recording:hover {
+  background: linear-gradient(135deg, #ff6161, #d90000);
+}
+
+@keyframes recording-pulse {
+  0%,
+  100% {
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+  }
+  50% {
+    box-shadow: 0 3px 18px rgba(255, 60, 60, 0.85);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hold-record-btn.recording {
+    animation: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .btn {
+    font-size: 0.8rem;
+    padding: 8px;
+    min-width: 80px;
+  }
+}
+
+@media (max-width: 480px) {
+  .btn {
+    font-size: 0.75rem;
+    padding: 6px;
+  }
+
+  .btn-row {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+}
