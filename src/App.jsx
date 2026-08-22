@@ -45,6 +45,9 @@ function ClassBox({
   closeOtherMenus,
   activeMenuId,
   setActiveMenuId,
+  activeVideoId,
+  setActiveVideoId,
+  isModalOpen,
 }) {
   const [name, setName] = useState(initialName);
   const [samples, setSamples] = useState([]);
@@ -52,6 +55,7 @@ function ClassBox({
   const [isWebcamActive, setIsWebcamActive] = useState(false);
   const [showHoldRow, setShowHoldRow] = useState(false);
   const [showTimeline, setShowTimeline] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
   const [timelineValue, setTimelineValue] = useState(0);
   const [timelineMax, setTimelineMax] = useState(0);
 
@@ -67,9 +71,12 @@ function ClassBox({
   const samplesRef = useRef([]);
   const pendingSamplesRef = useRef([]);
   const flushTimeoutRef = useRef(null);
+  const toggleRecordingRef = useRef(null);
+  const holdSourceRef = useRef(null);
 
   const hasImages = samples.length > 0;
   const isMenuOpen = activeMenuId === id;
+  const isSpaceTarget = showVideo && activeVideoId === id;
 
   useEffect(() => {
     const handler = (event) => {
@@ -167,6 +174,7 @@ function ClassBox({
     setShowVideo(true);
     setShowHoldRow(true);
     setShowTimeline(true);
+    setActiveVideoId(id);
     setTimelineValue(0);
     setTimelineMax(0);
 
@@ -253,10 +261,12 @@ function ClassBox({
     }
   }, [enqueueSample]);
 
-  const startHolding = (event) => {
+  const startHolding = (event, source = "pointer") => {
     if (event) event.preventDefault();
     stopHolding();
     isHoldingRef.current = true;
+    holdSourceRef.current = source;
+    setIsRecording(true);
 
     const runCaptureLoop = async () => {
       if (!isHoldingRef.current) return;
@@ -290,12 +300,58 @@ function ClassBox({
   const stopHolding = (event) => {
     if (event) event.preventDefault();
     isHoldingRef.current = false;
+    holdSourceRef.current = null;
+    setIsRecording(false);
     if (holdTimeoutRef.current) {
       clearTimeout(holdTimeoutRef.current);
       holdTimeoutRef.current = null;
     }
     flushPendingSamples();
   };
+
+  const stopHoldingFromPointer = (event) => {
+    if (holdSourceRef.current !== "pointer") return;
+    stopHolding(event);
+  };
+
+  const toggleRecording = () => {
+    const video = videoRef.current;
+    if (!video || !showVideo) return;
+
+    if (isHoldingRef.current) {
+      stopHolding();
+      return;
+    }
+
+    startHolding(undefined, "key");
+  };
+
+  useEffect(() => {
+    toggleRecordingRef.current = toggleRecording;
+  });
+
+  useEffect(() => {
+    if (!isSpaceTarget || isModalOpen) return;
+
+    const handler = (event) => {
+      if (event.code !== "Space" && event.key !== " ") return;
+      if (event.repeat || event.ctrlKey || event.metaKey || event.altKey) return;
+
+      const target = event.target;
+      const isTyping = Boolean(target) && (
+        target.isContentEditable ||
+        target.tagName === "TEXTAREA" ||
+        (target.tagName === "INPUT" && target.type !== "range")
+      );
+      if (isTyping) return;
+
+      event.preventDefault();
+      if (toggleRecordingRef.current) toggleRecordingRef.current();
+    };
+
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [isSpaceTarget, isModalOpen]);
 
   const handleWebcam = async () => {
     const video = videoRef.current;
@@ -317,6 +373,7 @@ function ClassBox({
       setShowVideo(true);
       setShowHoldRow(true);
       setShowTimeline(false);
+      setActiveVideoId(id);
 
       await video.play();
     } catch (err) {
@@ -366,6 +423,7 @@ function ClassBox({
     setShowTimeline(false);
     setTimelineValue(0);
     setTimelineMax(0);
+    setActiveVideoId((prev) => (prev === id ? null : prev));
   };
 
   const removeSampleAt = (index) => {
@@ -420,7 +478,12 @@ function ClassBox({
   }, [openModal, samplePreviewUrls]);
 
   return (
-    <div className="class-box">
+    <div
+      className={`class-box ${isSpaceTarget ? "space-active" : ""}`.trim()}
+      onMouseDown={() => {
+        if (showVideo && activeVideoId !== id) setActiveVideoId(id);
+      }}
+    >
       <div className="class-header">
         <span
           contentEditable
@@ -461,16 +524,22 @@ function ClassBox({
 
       <div className={`btn-row hold-record-row ${showHoldRow ? "show" : ""}`}>
         <button
-          className="btn hold-record-btn"
+          className={`btn hold-record-btn ${isRecording ? "recording" : ""}`.trim()}
           onMouseDown={startHolding}
-          onMouseUp={stopHolding}
-          onMouseLeave={stopHolding}
+          onMouseUp={stopHoldingFromPointer}
+          onMouseLeave={stopHoldingFromPointer}
           onTouchStart={startHolding}
-          onTouchEnd={stopHolding}
-          onTouchCancel={stopHolding}
+          onTouchEnd={stopHoldingFromPointer}
+          onTouchCancel={stopHoldingFromPointer}
         >
-          Hold &amp; Record
+          {isRecording ? "Recording..." : "Hold & Record"}
         </button>
+      </div>
+
+      <div className={`space-hint ${showHoldRow ? "show" : ""}`}>
+        {isSpaceTarget
+          ? `Press Space to ${isRecording ? "pause" : "record"}`
+          : "Click this class to control it with Space"}
       </div>
 
       <div className="video-container">
@@ -528,6 +597,7 @@ export default function App() {
   const [classes, setClasses] = useState([{ id: 1, name: "Class 1" }]);
   const [nextId, setNextId] = useState(2);
   const [activeMenuId, setActiveMenuId] = useState(null);
+  const [activeVideoId, setActiveVideoId] = useState(null);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [modalImages, setModalImages] = useState([]);
@@ -548,6 +618,7 @@ export default function App() {
 
   const deleteClass = (id) => {
     setClasses((prev) => prev.filter((item) => item.id !== id));
+    setActiveVideoId((prev) => (prev === id ? null : prev));
     closeOtherMenus();
   };
 
@@ -598,6 +669,9 @@ export default function App() {
             closeOtherMenus={closeOtherMenus}
             activeMenuId={activeMenuId}
             setActiveMenuId={setActiveMenuId}
+            activeVideoId={activeVideoId}
+            setActiveVideoId={setActiveVideoId}
+            isModalOpen={modalOpen}
           />
         ))}
 
